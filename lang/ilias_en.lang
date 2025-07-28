@@ -1,0 +1,49 @@
+// 
+// English Language File for Multi Course Creator Plugin
+//
+
+<!-- language file start -->
+obj_xmcc#:#Multi Course Creator
+objs_xmcc#:#Multi Course Creator
+obj_xmcc_duplicate#:#Copy
+objs_xmcc_duplicate#:#Copy Multi Course Creator
+obj_xmcc_select#:#Select Multi Course Creator
+xmcc_add#:#Add Multi Course Creator
+xmcc_new#:#Create New Multi Course Creator
+xmcc_read#:#Read access to Multi Course Creator
+xmcc_write#:#Edit Multi Course Creator
+xmcc_delete#:#Delete Multi Course Creator
+xmcc_visible#:#Multi Course Creator is visible
+xmcc_edit_permission#:#Change permissions
+crs_create_xmcc#:#Create Multi Course Creator
+rbac_create_xmcc#:#Create Multi Course Creator
+xmcc_created#:#Multi Course Creator has been created
+xmcc_updated#:#Multi Course Creator has been updated
+
+rep_robj_xmcc_create_courses#:#Create Courses
+rep_robj_xmcc_course_count#:#Number of Courses
+rep_robj_xmcc_base_name#:#Base Name
+rep_robj_xmcc_add_numbering#:#Add Numbering
+rep_robj_xmcc_numbering_format#:#Numbering Format
+rep_robj_xmcc_numbering_format_info#:#Use ## as placeholder for number (e.g. " - ##" becomes " - 01", " - 02", etc.)
+rep_robj_xmcc_target_folder#:#Target Folder (Ref-ID)
+rep_robj_xmcc_target_folder_info#:#Enter the reference ID of the target folder where courses should be created.
+rep_robj_xmcc_course_settings#:#Course Settings
+rep_robj_xmcc_online#:#Online
+rep_robj_xmcc_online_info#:#Course is visible to users
+rep_robj_xmcc_availability#:#Availability Period
+rep_robj_xmcc_availability_info#:#Period when the course is available
+rep_robj_xmcc_subscription_type#:#Registration Type
+rep_robj_xmcc_subscription_direct#:#Direct Registration
+rep_robj_xmcc_subscription_password#:#Registration with Password
+rep_robj_xmcc_subscription_confirmation#:#Registration with Confirmation
+rep_robj_xmcc_subscription_period#:#Registration Period
+rep_robj_xmcc_subscription_period_info#:#Period when registration is possible
+rep_robj_xmcc_max_members#:#Maximum Number of Members
+rep_robj_xmcc_max_members_info#:#0 = unlimited. If limited, a waiting list will be automatically activated.
+rep_robj_xmcc_created_courses#:#Created Courses
+rep_robj_xmcc_actions#:#Actions
+rep_robj_xmcc_goto_course#:#Go to Course
+rep_robj_xmcc_no_courses_yet#:#No courses have been created yet.
+rep_robj_xmcc_courses_created#:#%s courses have been successfully created.
+rep_robj_xmcc_plugin_configuration#:#Multi Course Creator Configuration

@@ -1,0 +1,49 @@
+// 
+// German Language File for Multi Course Creator Plugin
+//
+
+<!-- language file start -->
+obj_xmcc#:#Multi Course Creator
+objs_xmcc#:#Multi Course Creator
+obj_xmcc_duplicate#:#Kopieren
+objs_xmcc_duplicate#:#Multi Course Creator kopieren
+obj_xmcc_select#:#Multi Course Creator auswählen
+xmcc_add#:#Multi Course Creator hinzufügen
+xmcc_new#:#Neuen Multi Course Creator anlegen
+xmcc_read#:#Zugriff auf Multi Course Creator
+xmcc_write#:#Multi Course Creator bearbeiten
+xmcc_delete#:#Multi Course Creator löschen
+xmcc_visible#:#Multi Course Creator ist sichtbar
+xmcc_edit_permission#:#Rechte ändern
+crs_create_xmcc#:#Multi Course Creator erstellen
+rbac_create_xmcc#:#Multi Course Creator erstellen
+xmcc_created#:#Multi Course Creator wurde erstellt
+xmcc_updated#:#Multi Course Creator wurde aktualisiert
+
+rep_robj_xmcc_create_courses#:#Kurse erstellen
+rep_robj_xmcc_course_count#:#Anzahl Kurse
+rep_robj_xmcc_base_name#:#Basis-Name
+rep_robj_xmcc_add_numbering#:#Nummerierung hinzufügen
+rep_robj_xmcc_numbering_format#:#Nummerierungs-Format
+rep_robj_xmcc_numbering_format_info#:#Verwenden Sie ## als Platzhalter für die Nummer (z.B. " - ##" wird zu " - 01", " - 02", etc.)
+rep_robj_xmcc_target_folder#:#Zielordner (Ref-ID)
+rep_robj_xmcc_target_folder_info#:#Geben Sie die Referenz-ID des Zielordners ein, in dem die Kurse erstellt werden sollen.
+rep_robj_xmcc_course_settings#:#Kurs-Einstellungen
+rep_robj_xmcc_online#:#Online
+rep_robj_xmcc_online_info#:#Kurs ist für Benutzer sichtbar
+rep_robj_xmcc_availability#:#Verfügbarkeitszeitraum
+rep_robj_xmcc_availability_info#:#Zeitraum in dem der Kurs verfügbar ist
+rep_robj_xmcc_subscription_type#:#Anmeldeart
+rep_robj_xmcc_subscription_direct#:#Direkte Anmeldung
+rep_robj_xmcc_subscription_password#:#Anmeldung mit Passwort
+rep_robj_xmcc_subscription_confirmation#:#Anmeldung mit Bestätigung
+rep_robj_xmcc_subscription_period#:#Anmeldezeitraum
+rep_robj_xmcc_subscription_period_info#:#Zeitraum in dem Anmeldungen möglich sind
+rep_robj_xmcc_max_members#:#Maximale Teilnehmerzahl
+rep_robj_xmcc_max_members_info#:#0 = unbegrenzt. Bei Begrenzung wird automatisch eine Warteliste aktiviert.
+rep_robj_xmcc_created_courses#:#Erstellte Kurse
+rep_robj_xmcc_actions#:#Aktionen
+rep_robj_xmcc_goto_course#:#Zum Kurs
+rep_robj_xmcc_no_courses_yet#:#Es wurden noch keine Kurse erstellt.
+rep_robj_xmcc_courses_created#:#%s Kurse wurden erfolgreich erstellt.
+rep_robj_xmcc_plugin_configuration#:#Multi Course Creator Konfiguration
