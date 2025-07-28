@@ -7,13 +7,16 @@ class ilObjMultiCourseCreator extends ilObjectPlugin
 {
     protected array $created_courses = [];
     protected array $base_settings = [];
+    protected array $external_courses = [];
 
     /**
      * Constructor
      */
     public function __construct(int $a_ref_id = 0)
     {
+        error_log("DEBUG: ilObjMultiCourseCreator constructor called with ref_id: $a_ref_id");
         parent::__construct($a_ref_id);
+        error_log("DEBUG: After parent constructor - obj_id: " . $this->getId() . ", ref_id: " . $this->getRefId());
     }
 
     /**
@@ -32,14 +35,22 @@ class ilObjMultiCourseCreator extends ilObjectPlugin
         global $DIC;
         $db = $DIC->database();
 
-        $id = $db->nextId('rep_robj_xmcc_data');
-        $db->insert('rep_robj_xmcc_data', [
-            'id' => ['integer', $id],
-            'obj_id' => ['integer', $this->getId()],
-            'created_courses' => ['text', json_encode([])],
-            'base_settings' => ['text', json_encode([])],
-            'created_at' => ['timestamp', date('Y-m-d H:i:s')]
-        ]);
+        try {
+            $id = $db->nextId('rep_robj_xmcc_data');
+            $db->insert('rep_robj_xmcc_data', [
+                'id' => ['integer', $id],
+                'obj_id' => ['integer', $this->getId()],
+                'created_courses' => ['text', json_encode([])],
+                'base_settings' => ['text', json_encode([])],
+                'external_courses' => ['text', json_encode([])],
+                'created_at' => ['timestamp', date('Y-m-d H:i:s')]
+            ]);
+            
+            error_log("DEBUG: Successfully created xmcc data for obj_id: " . $this->getId() . " with id: " . $id);
+        } catch (Exception $e) {
+            error_log("ERROR: Failed to create xmcc data: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     /**
@@ -50,12 +61,36 @@ class ilObjMultiCourseCreator extends ilObjectPlugin
         global $DIC;
         $db = $DIC->database();
 
+        // Debug: Check if object exists in standard tables
+        error_log("DEBUG: Reading xmcc object with ID: " . $this->getId());
+        
+        // Check object_data table
+        $obj_query = 'SELECT * FROM object_data WHERE obj_id = ' . $db->quote($this->getId(), 'integer');
+        $obj_result = $db->query($obj_query);
+        if (!$db->fetchAssoc($obj_result)) {
+            error_log("ERROR: Object not found in object_data table for obj_id: " . $this->getId());
+            return;
+        }
+
         $query = 'SELECT * FROM rep_robj_xmcc_data WHERE obj_id = ' . $db->quote($this->getId(), 'integer');
         $result = $db->query($query);
 
         if ($row = $db->fetchAssoc($result)) {
             $this->created_courses = json_decode($row['created_courses'], true) ?? [];
             $this->base_settings = json_decode($row['base_settings'], true) ?? [];
+            // Prüfe ob external_courses Spalte existiert (für Backwards-Kompatibilität)
+            if (isset($row['external_courses'])) {
+                $this->external_courses = json_decode($row['external_courses'], true) ?? [];
+            } else {
+                $this->external_courses = [];
+            }
+            error_log("DEBUG: Successfully loaded xmcc data for obj_id: " . $this->getId());
+        } else {
+            error_log("DEBUG: No data found in rep_robj_xmcc_data for obj_id: " . $this->getId());
+            // Initialize with empty arrays if no data found
+            $this->created_courses = [];
+            $this->base_settings = [];
+            $this->external_courses = [];
         }
     }
 
@@ -70,6 +105,7 @@ class ilObjMultiCourseCreator extends ilObjectPlugin
         $db->update('rep_robj_xmcc_data', [
             'created_courses' => ['text', json_encode($this->created_courses)],
             'base_settings' => ['text', json_encode($this->base_settings)],
+            'external_courses' => ['text', json_encode($this->external_courses)],
         ], [
             'obj_id' => ['integer', $this->getId()]
         ]);
@@ -236,5 +272,15 @@ class ilObjMultiCourseCreator extends ilObjectPlugin
     public function setBaseSettings(array $settings): void
     {
         $this->base_settings = $settings;
+    }
+
+    public function getExternalCourses(): array
+    {
+        return $this->external_courses;
+    }
+
+    public function setExternalCourses(array $courses): void
+    {
+        $this->external_courses = $courses;
     }
 }

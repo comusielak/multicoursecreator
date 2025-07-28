@@ -64,6 +64,16 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
                 $this->manageCourses();
                 break;
                 
+            case 'addExternalCourse':
+                $this->checkPermission('write');
+                $this->addExternalCourse();
+                break;
+                
+            case 'removeExternalCourse':
+                $this->checkPermission('write');
+                $this->removeExternalCourse();
+                break;
+                
             case 'updateCourses':
                 $this->checkPermission('write');
                 $this->updateCourses();
@@ -293,16 +303,253 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
     {
         $this->tabs_gui->activateTab("manage_courses");
         
-        $created_courses = $this->object->getCreatedCourses();
+        // DEBUG: Check object type
+        error_log("DEBUG: manageCourses() - object type: " . get_class($this->object));
+        error_log("DEBUG: manageCourses() - object id: " . $this->object->getId());
+        error_log("DEBUG: manageCourses() - ref_id: " . $this->object->getRefId());
+
+        // Get all courses (created + external)
+        $all_courses = $this->getAllManagedCourses();
         
-        if (empty($created_courses)) {
+        if (empty($all_courses)) {
             $this->tpl->setOnScreenMessage('info', $this->plugin->txt('rep_robj_xmcc_no_courses_yet'));
+            
+            // Show form to add external courses
+            $this->showAddExternalCourseForm();
             return;
         }
         
-        // Create form for batch updates
-        $form = $this->initManageCoursesForm($created_courses);
-        $this->tpl->setContent($form->getHTML());
+        // Show add external course form first
+        $add_form_html = $this->getAddExternalCourseFormHTML();
+        
+        // Then show course management form
+        $manage_form = $this->initManageCoursesForm($all_courses);
+        
+        // Combine both forms
+        $combined_html = $add_form_html . "<hr style='margin: 20px 0;'>" . $manage_form->getHTML();
+        $this->tpl->setContent($combined_html);
+    }
+
+    /**
+     * Get all managed courses (created + external)
+     */
+    protected function getAllManagedCourses(): array
+    {
+        $created_courses = $this->object->getCreatedCourses();
+        $external_courses = $this->object->getExternalCourses();
+        
+        // Merge and return all courses
+        return array_merge($created_courses, $external_courses);
+    }
+
+    /**
+     * Show form to add external courses
+     */
+    protected function showAddExternalCourseForm(): void
+    {
+        $html = $this->getAddExternalCourseFormHTML();
+        $this->tpl->setContent($html);
+    }
+
+    /**
+     * Get HTML for add external course form
+     */
+    protected function getAddExternalCourseFormHTML(): string
+    {
+        $form = new ilPropertyFormGUI();
+        $form->setFormAction($this->ctrl->getFormAction($this));
+        $form->setTitle("Externe Kurse hinzufügen");
+        
+        // Section header
+        $section = new ilFormSectionHeaderGUI();
+        $section->setTitle("Bestehende Kurse zur Verwaltung hinzufügen");
+        $form->addItem($section);
+        
+        // Ref-ID input
+        $ref_id_input = new ilTextInputGUI("Kurs Ref-ID", "external_ref_id");
+        $ref_id_input->setInfo("Geben Sie die Referenz-ID eines bestehenden Kurses ein, um ihn zur Verwaltung hinzuzufügen.");
+        $ref_id_input->setSize(10);
+        $ref_id_input->setMaxLength(10);
+        $form->addItem($ref_id_input);
+        
+        // Multiple ref-ids
+        $multiple_input = new ilTextAreaInputGUI("Mehrere Ref-IDs", "multiple_ref_ids");
+        $multiple_input->setInfo("Alternativ: Mehrere Ref-IDs durch Kommas getrennt (z.B. 12345, 12346, 12347)");
+        $multiple_input->setRows(3);
+        $multiple_input->setCols(50);
+        $form->addItem($multiple_input);
+        
+        $form->addCommandButton("addExternalCourse", "Kurs(e) hinzufügen");
+        
+        // Show existing external courses
+        $external_courses = $this->object->getExternalCourses();
+        if (!empty($external_courses)) {
+            $ext_section = new ilFormSectionHeaderGUI();
+            $ext_section->setTitle("Bereits hinzugefügte externe Kurse");
+            $form->addItem($ext_section);
+            
+            $course_list = "";
+            foreach ($external_courses as $course) {
+                if (ilObject::_exists($course['ref_id'], true)) {
+                    $remove_link = $this->ctrl->getLinkTarget($this, 'removeExternalCourse') . '&ref_id=' . $course['ref_id'];
+                    $course_list .= "<div style='margin: 5px 0;'>";
+                    $course_list .= "<strong>" . htmlspecialchars($course['title']) . "</strong> (Ref-ID: " . $course['ref_id'] . ") ";
+                    $course_list .= "<a href='" . $remove_link . "' style='color: red; margin-left: 10px;'>[Entfernen]</a>";
+                    $course_list .= "</div>";
+                }
+            }
+            
+            $info_item = new ilCustomInputGUI("", "");
+            $info_item->setHtml($course_list);
+            $form->addItem($info_item);
+        }
+        
+        return $form->getHTML();
+    }
+
+    /**
+     * Add external course to management
+     */
+    protected function addExternalCourse(): void
+    {
+        global $DIC;
+        
+        $single_ref_id = 0;
+        if (isset($_POST['external_ref_id']) && is_numeric($_POST['external_ref_id'])) {
+            $single_ref_id = (int) $_POST['external_ref_id'];
+        }
+        
+        $multiple_ref_ids = "";
+        if (isset($_POST['multiple_ref_ids'])) {
+            $multiple_ref_ids = trim((string) $_POST['multiple_ref_ids']);
+        }
+        
+        $ref_ids = [];
+        
+        // Single ref_id
+        if ($single_ref_id > 0) {
+            $ref_ids[] = $single_ref_id;
+        }
+        
+        // Multiple ref_ids
+        if (!empty($multiple_ref_ids)) {
+            $multiple_ids = explode(',', $multiple_ref_ids);
+            foreach ($multiple_ids as $id) {
+                $id = (int) trim($id);
+                if ($id > 0) {
+                    $ref_ids[] = $id;
+                }
+            }
+        }
+        
+        if (empty($ref_ids)) {
+            $this->tpl->setOnScreenMessage('failure', 'Keine gültigen Ref-IDs eingegeben.');
+            $this->manageCourses();
+            return;
+        }
+        
+        $added_count = 0;
+        $errors = [];
+        $external_courses = $this->object->getExternalCourses();
+        
+        foreach ($ref_ids as $ref_id) {
+            try {
+                // Check if object exists and is a course
+                if (!ilObject::_exists($ref_id, true)) {
+                    $errors[] = "Ref-ID $ref_id: Objekt existiert nicht";
+                    continue;
+                }
+                
+                $obj_id = ilObject::_lookupObjId($ref_id);
+                $type = ilObject::_lookupType($obj_id);
+                
+                if ($type !== 'crs') {
+                    $errors[] = "Ref-ID $ref_id: Ist kein Kurs (Type: $type)";
+                    continue;
+                }
+                
+                // Check if already managed
+                $already_exists = false;
+                foreach ($external_courses as $existing) {
+                    if ($existing['ref_id'] == $ref_id) {
+                        $already_exists = true;
+                        break;
+                    }
+                }
+                
+                if ($already_exists) {
+                    $errors[] = "Ref-ID $ref_id: Bereits zur Verwaltung hinzugefügt";
+                    continue;
+                }
+                
+                // Add to external courses
+                $course_title = ilObject::_lookupTitle($obj_id);
+                $external_courses[] = [
+                    'ref_id' => $ref_id,
+                    'obj_id' => $obj_id,
+                    'title' => $course_title,
+                    'added_date' => date('Y-m-d H:i:s')
+                ];
+                
+                $added_count++;
+                
+            } catch (Exception $e) {
+                $errors[] = "Ref-ID $ref_id: " . $e->getMessage();
+            }
+        }
+        
+        // Save external courses
+        $this->object->setExternalCourses($external_courses);
+        $this->object->update();
+        
+        if ($added_count > 0) {
+            $this->tpl->setOnScreenMessage('success', "$added_count Kurs(e) zur Verwaltung hinzugefügt.", true);
+        }
+        
+        if (!empty($errors)) {
+            $this->tpl->setOnScreenMessage('info', implode('<br>', $errors), true);
+        }
+        
+        $this->ctrl->redirect($this, 'manageCourses');
+    }
+
+    /**
+     * Remove external course from management
+     */
+    protected function removeExternalCourse(): void
+    {
+        $ref_id = 0;
+        if (isset($_GET['ref_id']) && is_numeric($_GET['ref_id'])) {
+            $ref_id = (int) $_GET['ref_id'];
+        }
+        
+        if ($ref_id <= 0) {
+            $this->tpl->setOnScreenMessage('failure', 'Ungültige Ref-ID.');
+            $this->manageCourses();
+            return;
+        }
+        
+        $external_courses = $this->object->getExternalCourses();
+        $updated_courses = [];
+        $found = false;
+        
+        foreach ($external_courses as $course) {
+            if ($course['ref_id'] != $ref_id) {
+                $updated_courses[] = $course;
+            } else {
+                $found = true;
+            }
+        }
+        
+        if ($found) {
+            $this->object->setExternalCourses($updated_courses);
+            $this->object->update();
+            $this->tpl->setOnScreenMessage('success', 'Kurs aus der Verwaltung entfernt.', true);
+        } else {
+            $this->tpl->setOnScreenMessage('failure', 'Kurs nicht gefunden.', true);
+        }
+        
+        $this->ctrl->redirect($this, 'manageCourses');
     }
 
     /**
@@ -360,6 +607,43 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
         
         $form->addItem($course_checkboxes);
         
+        // "Alle auswählen" Checkbox
+        $select_all = new ilCheckboxInputGUI("Alle Kurse auswählen", "select_all_courses");
+        $select_all->setInfo("Klicken Sie hier, um alle Kurse auf einmal zu markieren/entmarkieren");
+        $form->addItem($select_all);
+        
+        // JavaScript für "Alle auswählen" Funktionalität
+        $js_code = "
+        <script type='text/javascript'>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Finde die 'Alle auswählen' Checkbox
+            var selectAllCheckbox = document.querySelector('input[name=\"select_all_courses\"]');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    // Finde alle Kurs-Checkboxen
+                    var courseCheckboxes = document.querySelectorAll('input[name=\"selected_courses[]\"]');
+                    courseCheckboxes.forEach(function(checkbox) {
+                        checkbox.checked = selectAllCheckbox.checked;
+                    });
+                });
+            }
+            
+            // Optional: Wenn alle Kurse manuell ausgewählt sind, aktiviere auch 'Alle auswählen'
+            var courseCheckboxes = document.querySelectorAll('input[name=\"selected_courses[]\"]');
+            courseCheckboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    var allChecked = true;
+                    courseCheckboxes.forEach(function(cb) {
+                        if (!cb.checked) allChecked = false;
+                    });
+                    if (selectAllCheckbox) {
+                        selectAllCheckbox.checked = allChecked;
+                    }
+                });
+            });
+        });
+        </script>";
+        
         // Batch update settings
         $update_section = new ilFormSectionHeaderGUI();
         $update_section->setTitle($this->plugin->txt("rep_robj_xmcc_batch_settings"));
@@ -415,6 +699,35 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
         
         $form->addCommandButton("updateCourses", $this->plugin->txt("rep_robj_xmcc_update_selected_courses"));
         $form->addCommandButton("manageCourses", $this->lng->txt("cancel"));
+        
+        // JavaScript ans Ende des Formulars anhängen
+        global $DIC;
+        $DIC->ui()->mainTemplate()->addOnLoadCode("
+            var selectAllCheckbox = document.querySelector('input[name=\"select_all_courses\"]');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    var courseCheckboxes = document.querySelectorAll('input[name=\"selected_courses[]\"]');
+                    courseCheckboxes.forEach(function(checkbox) {
+                        checkbox.checked = selectAllCheckbox.checked;
+                    });
+                });
+            }
+            
+            var courseCheckboxes = document.querySelectorAll('input[name=\"selected_courses[]\"]');
+            courseCheckboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    var allChecked = true;
+                    var anyChecked = false;
+                    courseCheckboxes.forEach(function(cb) {
+                        if (cb.checked) anyChecked = true;
+                        if (!cb.checked) allChecked = false;
+                    });
+                    if (selectAllCheckbox) {
+                        selectAllCheckbox.checked = allChecked;
+                    }
+                });
+            });
+        ");
         
         return $form;
     }
@@ -599,10 +912,17 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
         if ($this->access->checkAccess('write', '', $this->object->getRefId())) {
             $this->tabs_gui->addTab(
                 "properties",
-                $this->lng->txt("rep_robj_xmcc_create_courses"),
+                $this->plugin->txt("rep_robj_xmcc_create_courses"),
                 $this->ctrl->getLinkTarget($this, "editProperties")
             );
         }
+
+        // Manage Courses tab - hier war es vorher nicht!
+        $this->tabs_gui->addTab(
+            "manage_courses",
+            "Kurse verwalten", 
+            $this->ctrl->getLinkTarget($this, "manageCourses")
+        );           
         
         // Info tab
         if ($this->access->checkAccess('visible', '', $this->object->getRefId())) {
@@ -620,13 +940,6 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
                 $this->lng->txt("perm_settings"),
                 $this->ctrl->getLinkTargetByClass("ilpermissiongui", "perm")
             );
-        }
-
-        // Manage Courses tab - hier war es vorher nicht!
-        $this->tabs_gui->addTab(
-            "manage_courses",
-            "Kurse verwalten", 
-            $this->ctrl->getLinkTarget($this, "manageCourses")
-        );        
+        }     
     }
 }
