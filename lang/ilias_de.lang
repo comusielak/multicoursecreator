@@ -47,3 +47,21 @@ rep_robj_xmcc_goto_course#:#Zum Kurs
 rep_robj_xmcc_no_courses_yet#:#Es wurden noch keine Kurse erstellt.
 rep_robj_xmcc_courses_created#:#%s Kurse wurden erfolgreich erstellt.
 rep_robj_xmcc_plugin_configuration#:#Multi Course Creator Konfiguration
+rep_robj_xmcc_manage_courses#:#Kurse verwalten
+rep_robj_xmcc_select_courses#:#Kurse auswählen
+rep_robj_xmcc_courses#:#Kurse
+rep_robj_xmcc_batch_settings#:#Einstellungen für ausgewählte Kurse
+rep_robj_xmcc_update_online#:#Online-Status ändern
+rep_robj_xmcc_online_status#:#Online-Status
+rep_robj_xmcc_set_online#:#Online setzen
+rep_robj_xmcc_set_offline#:#Offline setzen
+rep_robj_xmcc_status_online#:#Online
+rep_robj_xmcc_status_offline#:#Offline
+rep_robj_xmcc_update_max_members#:#Maximale Teilnehmerzahl ändern
+rep_robj_xmcc_new_max_members#:#Neue maximale Teilnehmerzahl
+rep_robj_xmcc_update_subscription#:#Anmeldeart ändern
+rep_robj_xmcc_update_availability#:#Verfügbarkeitszeitraum ändern
+rep_robj_xmcc_new_availability#:#Neuer Verfügbarkeitszeitraum
+rep_robj_xmcc_update_selected_courses#:#Ausgewählte Kurse aktualisieren
+rep_robj_xmcc_no_courses_selected#:#Keine Kurse ausgewählt
+rep_robj_xmcc_courses_updated#:#%s Kurse wurden erfolgreich aktualisiert.

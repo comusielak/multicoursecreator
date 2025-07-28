@@ -47,3 +47,21 @@ rep_robj_xmcc_goto_course#:#Go to Course
 rep_robj_xmcc_no_courses_yet#:#No courses have been created yet.
 rep_robj_xmcc_courses_created#:#%s courses have been successfully created.
 rep_robj_xmcc_plugin_configuration#:#Multi Course Creator Configuration
+rep_robj_xmcc_manage_courses#:#Manage Courses
+rep_robj_xmcc_select_courses#:#Select Courses
+rep_robj_xmcc_courses#:#Courses
+rep_robj_xmcc_batch_settings#:#Settings for Selected Courses
+rep_robj_xmcc_update_online#:#Change Online Status
+rep_robj_xmcc_online_status#:#Online Status
+rep_robj_xmcc_set_online#:#Set Online
+rep_robj_xmcc_set_offline#:#Set Offline
+rep_robj_xmcc_status_online#:#Online
+rep_robj_xmcc_status_offline#:#Offline
+rep_robj_xmcc_update_max_members#:#Change Maximum Number of Members
+rep_robj_xmcc_new_max_members#:#New Maximum Number of Members
+rep_robj_xmcc_update_subscription#:#Change Registration Type
+rep_robj_xmcc_update_availability#:#Change Availability Period
+rep_robj_xmcc_new_availability#:#New Availability Period
+rep_robj_xmcc_update_selected_courses#:#Update Selected Courses
+rep_robj_xmcc_no_courses_selected#:#No courses selected
+rep_robj_xmcc_courses_updated#:#%s courses have been successfully updated.

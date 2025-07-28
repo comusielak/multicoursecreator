@@ -35,6 +35,19 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
         // Load plugin language file
         $this->plugin->loadLanguageModule();
         
+        // Debug: Log the ref_id being accessed
+        global $DIC;
+        $ref_id = $this->object ? $this->object->getRefId() : 'NO_OBJECT';
+        $obj_id = $this->object ? $this->object->getId() : 'NO_OBJECT';
+        error_log("DEBUG: performCommand() called with cmd='$cmd', ref_id='$ref_id', obj_id='$obj_id'");
+        
+        // Additional safety check
+        if (!$this->object || !$this->object->getId()) {
+            error_log("ERROR: No valid object found in performCommand()");
+            $this->tpl->setOnScreenMessage('failure', 'Invalid plugin object. Please create a new one.');
+            return;
+        }
+        
         switch ($cmd) {
             case 'editProperties':
                 $this->checkPermission('write');
@@ -44,6 +57,16 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
             case 'updateProperties':
                 $this->checkPermission('write');
                 $this->updateProperties();
+                break;
+                
+            case 'manageCourses':
+                $this->checkPermission('write');
+                $this->manageCourses();
+                break;
+                
+            case 'updateCourses':
+                $this->checkPermission('write');
+                $this->updateCourses();
                 break;
                 
             case 'showContent':
@@ -264,6 +287,235 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
     }
 
     /**
+     * Manage existing courses
+     */
+    protected function manageCourses(): void
+    {
+        $this->tabs_gui->activateTab("manage_courses");
+        
+        $created_courses = $this->object->getCreatedCourses();
+        
+        if (empty($created_courses)) {
+            $this->tpl->setOnScreenMessage('info', $this->plugin->txt('rep_robj_xmcc_no_courses_yet'));
+            return;
+        }
+        
+        // Create form for batch updates
+        $form = $this->initManageCoursesForm($created_courses);
+        $this->tpl->setContent($form->getHTML());
+    }
+
+    /**
+     * Initialize manage courses form
+     */
+    protected function initManageCoursesForm(array $courses): ilPropertyFormGUI
+    {
+        global $DIC;
+        
+        // Load plugin language
+        $this->plugin->loadLanguageModule();
+        
+        $form = new ilPropertyFormGUI();
+        $form->setFormAction($this->ctrl->getFormAction($this));
+        $form->setTitle($this->plugin->txt("rep_robj_xmcc_manage_courses"));
+        
+        // Course selection
+        $course_section = new ilFormSectionHeaderGUI();
+        $course_section->setTitle($this->plugin->txt("rep_robj_xmcc_select_courses"));
+        $form->addItem($course_section);
+        
+        // Create checkboxes for each course
+        $course_checkboxes = new ilCheckboxGroupInputGUI($this->plugin->txt("rep_robj_xmcc_courses"), "selected_courses");
+        
+        foreach ($courses as $course_data) {
+            $ref_id = $course_data['ref_id'];
+            $title = $course_data['title'];
+            
+            // Check if course still exists
+            if (!ilObject::_exists($ref_id, true)) {
+                continue;
+            }
+            
+            // Load course to get current settings
+            try {
+                $course = new ilObjCourse($ref_id);
+                $is_online = !$course->getOfflineStatus();
+                $max_members = $course->getSubscriptionMaxMembers();
+                $status_info = $is_online ? 
+                    $this->plugin->txt("rep_robj_xmcc_status_online") : 
+                    $this->plugin->txt("rep_robj_xmcc_status_offline");
+                
+                if ($max_members > 0) {
+                    $status_info .= " | " . $this->plugin->txt("rep_robj_xmcc_max_members") . ": " . $max_members;
+                }
+                
+                $option = new ilCheckboxOption($title . " (" . $status_info . ")", $ref_id);
+                $course_checkboxes->addOption($option);
+                
+            } catch (Exception $e) {
+                // Course might be deleted, skip it
+                continue;
+            }
+        }
+        
+        $form->addItem($course_checkboxes);
+        
+        // Batch update settings
+        $update_section = new ilFormSectionHeaderGUI();
+        $update_section->setTitle($this->plugin->txt("rep_robj_xmcc_batch_settings"));
+        $form->addItem($update_section);
+        
+        // Online/Offline status
+        $online_update = new ilCheckboxInputGUI($this->plugin->txt("rep_robj_xmcc_update_online"), "update_online");
+        
+        $online_status = new ilRadioGroupInputGUI($this->plugin->txt("rep_robj_xmcc_online_status"), "online_status");
+        $online_status->addOption(new ilRadioOption($this->plugin->txt("rep_robj_xmcc_set_online"), "1"));
+        $online_status->addOption(new ilRadioOption($this->plugin->txt("rep_robj_xmcc_set_offline"), "0"));
+        $online_status->setValue("1");
+        $online_update->addSubItem($online_status);
+        
+        $form->addItem($online_update);
+        
+        // Max members update
+        $members_update = new ilCheckboxInputGUI($this->plugin->txt("rep_robj_xmcc_update_max_members"), "update_max_members");
+        
+        $max_members = new ilNumberInputGUI($this->plugin->txt("rep_robj_xmcc_new_max_members"), "new_max_members");
+        $max_members->setMinValue(0);
+        $max_members->setMaxValue(9999);
+        $max_members->setInfo($this->plugin->txt("rep_robj_xmcc_max_members_info"));
+        $members_update->addSubItem($max_members);
+        
+        $form->addItem($members_update);
+        
+        // Subscription type update
+        $sub_update = new ilCheckboxInputGUI($this->plugin->txt("rep_robj_xmcc_update_subscription"), "update_subscription");
+        
+        $sub_type = new ilRadioGroupInputGUI($this->plugin->txt("rep_robj_xmcc_subscription_type"), "new_subscription_type");
+        $sub_type->addOption(new ilRadioOption(
+            $this->plugin->txt("rep_robj_xmcc_subscription_direct"),
+            (string) ilCourseConstants::IL_CRS_SUBSCRIPTION_DIRECT
+        ));
+        $sub_type->addOption(new ilRadioOption(
+            $this->plugin->txt("rep_robj_xmcc_subscription_confirmation"),
+            (string) ilCourseConstants::IL_CRS_SUBSCRIPTION_CONFIRMATION
+        ));
+        $sub_type->setValue((string) ilCourseConstants::IL_CRS_SUBSCRIPTION_DIRECT);
+        $sub_update->addSubItem($sub_type);
+        
+        $form->addItem($sub_update);
+        
+        // Availability period update
+        $avail_update = new ilCheckboxInputGUI($this->plugin->txt("rep_robj_xmcc_update_availability"), "update_availability");
+        
+        $avail_period = new ilDateDurationInputGUI($this->plugin->txt("rep_robj_xmcc_new_availability"), "new_availability_period");
+        $avail_period->setShowTime(true);
+        $avail_update->addSubItem($avail_period);
+        
+        $form->addItem($avail_update);
+        
+        $form->addCommandButton("updateCourses", $this->plugin->txt("rep_robj_xmcc_update_selected_courses"));
+        $form->addCommandButton("manageCourses", $this->lng->txt("cancel"));
+        
+        return $form;
+    }
+
+    /**
+     * Update selected courses with batch settings
+     */
+    protected function updateCourses(): void
+    {
+        $form = $this->initManageCoursesForm($this->object->getCreatedCourses());
+        
+        if ($form->checkInput()) {
+            $selected_courses = $form->getInput('selected_courses') ?? [];
+            
+            if (empty($selected_courses)) {
+                $this->tpl->setOnScreenMessage('failure', $this->plugin->txt('rep_robj_xmcc_no_courses_selected'));
+                $this->manageCourses();
+                return;
+            }
+            
+            $updated_count = 0;
+            $errors = [];
+            
+            foreach ($selected_courses as $ref_id) {
+                try {
+                    if (!ilObject::_exists($ref_id, true)) {
+                        continue;
+                    }
+                    
+                    $course = new ilObjCourse($ref_id);
+                    
+                    // Update online status
+                    if ($form->getInput('update_online')) {
+                        $online = (bool) $form->getInput('online_status');
+                        $property_online = $course->getObjectProperties()->getPropertyIsOnline();
+                        $online_prop = $online ? $property_online->withOnline() : $property_online->withOffline();
+                        $course->getObjectProperties()->storePropertyIsOnline($online_prop);
+                    }
+                    
+                    // Update max members
+                    if ($form->getInput('update_max_members')) {
+                        $max_members = (int) $form->getInput('new_max_members');
+                        if ($max_members > 0) {
+                            $course->enableSubscriptionMembershipLimitation(true);
+                            $course->setSubscriptionMaxMembers($max_members);
+                            $course->enableWaitingList(true);
+                        } else {
+                            $course->enableSubscriptionMembershipLimitation(false);
+                            $course->enableWaitingList(false);
+                        }
+                    }
+                    
+                    // Update subscription type
+                    if ($form->getInput('update_subscription')) {
+                        $sub_type = (int) $form->getInput('new_subscription_type');
+                        $course->setSubscriptionType($sub_type);
+                    }
+                    
+                    // Update availability period
+                    if ($form->getInput('update_availability')) {
+                        $avail_period = $form->getItemByPostVar('new_availability_period');
+                        if ($avail_period->getStart() && $avail_period->getEnd()) {
+                            $course->setActivationStart($avail_period->getStart()->get(IL_CAL_UNIX));
+                            $course->setActivationEnd($avail_period->getEnd()->get(IL_CAL_UNIX));
+                            $course->setActivationVisibility(true);
+                        } else {
+                            $course->setActivationStart(0);
+                            $course->setActivationEnd(0);
+                            $course->setActivationVisibility(false);
+                        }
+                    }
+                    
+                    $course->update();
+                    $updated_count++;
+                    
+                } catch (Exception $e) {
+                    $errors[] = "Course " . $ref_id . ": " . $e->getMessage();
+                }
+            }
+            
+            if ($updated_count > 0) {
+                $message = sprintf(
+                    $this->plugin->txt('rep_robj_xmcc_courses_updated'),
+                    $updated_count
+                );
+                $this->tpl->setOnScreenMessage('success', $message, true);
+            }
+            
+            if (!empty($errors)) {
+                $this->tpl->setOnScreenMessage('info', implode('<br>', $errors), true);
+            }
+            
+            $this->ctrl->redirect($this, 'manageCourses');
+            
+        } else {
+            $form->setValuesByPost();
+            $this->tpl->setContent($form->getHTML());
+        }
+    }
+
+    /**
      * Update properties (create courses)
      */
     protected function updateProperties(): void
@@ -369,5 +621,12 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
                 $this->ctrl->getLinkTargetByClass("ilpermissiongui", "perm")
             );
         }
+
+        // Manage Courses tab - hier war es vorher nicht!
+        $this->tabs_gui->addTab(
+            "manage_courses",
+            "Kurse verwalten", 
+            $this->ctrl->getLinkTarget($this, "manageCourses")
+        );        
     }
 }
