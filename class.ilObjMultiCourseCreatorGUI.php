@@ -117,7 +117,7 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
         // Add create courses button if user has write permission
         if ($this->access->checkAccess('write', '', $this->object->getRefId())) {
             $toolbar->addButton(
-                $this->lng->txt("rep_robj_xmcc_create_courses"),
+                $this->plugin->txt("rep_robj_xmcc_create_courses"),
                 $this->ctrl->getLinkTarget($this, "editProperties")
             );
         }
@@ -143,7 +143,7 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
         $table_html .= '<table class="table table-striped">';
         $table_html .= '<thead><tr>';
         $table_html .= '<th>' . $this->lng->txt('title') . '</th>';
-        $table_html .= '<th>' . $this->lng->txt('rep_robj_xmcc_actions') . '</th>';
+        $table_html .= '<th>' . $this->plugin->txt('rep_robj_xmcc_actions') . '</th>';
         $table_html .= '</tr></thead><tbody>';
         
         foreach ($courses as $course_data) {
@@ -160,7 +160,7 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
             $table_html .= '<tr>';
             $table_html .= '<td><a href="' . $link . '">' . htmlspecialchars($title) . '</a></td>';
             $table_html .= '<td><a href="' . $link . '" class="btn btn-default btn-sm">' . 
-                          $this->lng->txt('rep_robj_xmcc_goto_course') . '</a></td>';
+                          $this->plugin->txt('rep_robj_xmcc_goto_course') . '</a></td>';
             $table_html .= '</tr>';
         }
         
@@ -391,7 +391,9 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
             $course_list = "";
             foreach ($external_courses as $course) {
                 if (ilObject::_exists($course['ref_id'], true)) {
-                    $remove_link = $this->ctrl->getLinkTarget($this, 'removeExternalCourse') . '&ref_id=' . $course['ref_id'];
+                    $this->ctrl->setParameter($this, 'course_ref_id', $course['ref_id']);
+                    $remove_link = $this->ctrl->getLinkTarget($this, 'removeExternalCourse');
+                    $this->ctrl->setParameter($this, 'course_ref_id', ''); // Parameter zurücksetzen
                     $course_list .= "<div style='margin: 5px 0;'>";
                     $course_list .= "<strong>" . htmlspecialchars($course['title']) . "</strong> (Ref-ID: " . $course['ref_id'] . ") ";
                     $course_list .= "<a href='" . $remove_link . "' style='color: red; margin-left: 10px;'>[Entfernen]</a>";
@@ -516,42 +518,41 @@ class ilObjMultiCourseCreatorGUI extends ilObjectPluginGUI
     /**
      * Remove external course from management
      */
-    protected function removeExternalCourse(): void
-    {
-        $ref_id = 0;
-        if (isset($_GET['ref_id']) && is_numeric($_GET['ref_id'])) {
-            $ref_id = (int) $_GET['ref_id'];
-        }
-        
-        if ($ref_id <= 0) {
-            $this->tpl->setOnScreenMessage('failure', 'Ungültige Ref-ID.');
-            $this->manageCourses();
-            return;
-        }
-        
-        $external_courses = $this->object->getExternalCourses();
-        $updated_courses = [];
-        $found = false;
-        
-        foreach ($external_courses as $course) {
-            if ($course['ref_id'] != $ref_id) {
-                $updated_courses[] = $course;
-            } else {
-                $found = true;
-            }
-        }
-        
-        if ($found) {
-            $this->object->setExternalCourses($updated_courses);
-            $this->object->update();
-            $this->tpl->setOnScreenMessage('success', 'Kurs aus der Verwaltung entfernt.', true);
-        } else {
-            $this->tpl->setOnScreenMessage('failure', 'Kurs nicht gefunden.', true);
-        }
-        
-        $this->ctrl->redirect($this, 'manageCourses');
+protected function removeExternalCourse(): void
+{
+    $ref_id = 0;
+    if (isset($_GET['course_ref_id']) && is_numeric($_GET['course_ref_id'])) {
+        $ref_id = (int) $_GET['course_ref_id'];
     }
-
+    
+    if ($ref_id <= 0) {
+        $this->tpl->setOnScreenMessage('failure', 'Ungültige Ref-ID.');
+        $this->manageCourses();
+        return;
+    }
+    
+    $external_courses = $this->object->getExternalCourses();
+    $updated_courses = [];
+    $found = false;
+    
+    foreach ($external_courses as $course) {
+        if ($course['ref_id'] != $ref_id) {
+            $updated_courses[] = $course;
+        } else {
+            $found = true;
+        }
+    }
+    
+    if ($found) {
+        $this->object->setExternalCourses($updated_courses);
+        $this->object->update();
+        $this->tpl->setOnScreenMessage('success', 'Kurs aus der Verwaltung entfernt.', true);
+    } else {
+        $this->tpl->setOnScreenMessage('failure', 'Kurs nicht gefunden.', true);
+    }
+    
+    $this->ctrl->redirect($this, 'manageCourses');
+}
     /**
      * Initialize manage courses form
      */
